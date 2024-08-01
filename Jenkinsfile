@@ -39,7 +39,7 @@ pipeline {
             {
                 sh'''
                     ls -la
-                    test -f /build
+                    test -f build/index.html
                     npm ci
                     npm test
                 '''
