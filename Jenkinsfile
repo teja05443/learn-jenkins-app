@@ -1,22 +1,17 @@
 pipeline {
     agent any
 
-    stages 
-    {
+    stages {
         /*
-        stage('Build') 
-        {
-            agent 
-            {
-                docker
-                {   
+        stage('Build') {
+            agent {
+                docker {
                     image 'node:18-alpine'
                     reuseNode true
                 }
             }
-            steps 
-            {
-                sh'''
+            steps {
+                sh '''
                     ls -la
                     npm --version
                     node --version
@@ -27,48 +22,35 @@ pipeline {
             }
         }
         */
-        stage('Test Parallel')
-        {
-            Parallel
-            {
-                stage('Test') 
-                {
-                    agent 
-                    {
-                        docker
-                        {   
+        stage('Test Parallel') {
+            parallel {
+                stage('Test') {
+                    agent {
+                        docker {
                             image 'node:18-alpine'
                             reuseNode true
                         }
                     }
-                    steps 
-                    {
-                        sh'''
+                    steps {
+                        sh '''
                             test -f build/index.html
                             npm test
                         '''
                     }
                 }
-                
-
-                stage('E2E') 
-                {
-                    agent 
-                    {
-                        docker
-                        {   
+                stage('E2E') {
+                    agent {
+                        docker {
                             image 'mcr.microsoft.com/playwright:v1.45.1-jammy'
                             reuseNode true
                         }
                     }
-                    steps 
-                    {
-                        sh'''
+                    steps {
+                        sh '''
                             npm install serve
                             node_modules/.bin/serve -s build &
                             sleep 10
                             npx playwright test
-
                         '''
                     }
                 }
