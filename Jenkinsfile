@@ -3,6 +3,7 @@ pipeline {
 
     stages 
     {
+        /*
         stage('Build') 
         {
             agent 
@@ -25,6 +26,7 @@ pipeline {
                 '''
             }
         }
+        */
         stage('Test') 
         {
             agent 
@@ -40,6 +42,28 @@ pipeline {
                 sh'''
                     test -f build/index.html
                     npm test
+                '''
+            }
+        }
+
+        stage('Test') 
+        {
+            agent 
+            {
+                docker
+                {   
+                    image 'node:18-alpine'
+                    reuseNode true
+                }
+            }
+            steps 
+            {
+                sh'''
+                    npm install serve
+                    node_modules\.bin\serve serve -s build &
+                    sleep 10
+                    npx playwright test
+
                 '''
             }
         }
