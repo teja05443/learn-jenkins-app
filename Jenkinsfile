@@ -1,11 +1,9 @@
 pipeline {
     agent any
 
-    environment
-    {
+    environment {
         NETLIFY_SITE_ID = '6d0666f9-daf2-480e-90a7-bd4b0971a441'
         NETLIFY_AUTH_TOKEN = credentials('netlify-token')
-
     }
 
     stages {
@@ -28,6 +26,7 @@ pipeline {
                 '''
             }
         }
+
         stage('Test Parallel') {
             parallel {
                 stage('Test') {
@@ -77,7 +76,25 @@ pipeline {
                     echo "Deploying to production. SITE ID : $NETLIFY_SITE_ID"
                     node_modules/.bin/netlify status
                     node_modules/.bin/netlify deploy --dir=build --prod
+                '''
+            }
+        }
 
+        stage('Prod E2E') {
+            agent {
+                docker {
+                    image 'mcr.microsoft.com/playwright:v1.39.0-jammy'
+                    reuseNode true
+                }
+            }
+
+            environment
+            {
+                CI_ENVIRONMENT_URL = 'https://poetic-kelpie-9fd244.netlify.app'
+            }
+            steps {
+                sh '''
+                    npx playwright test
                 '''
             }
         }
