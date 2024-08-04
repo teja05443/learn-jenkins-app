@@ -80,7 +80,12 @@ pipeline {
             }
         }
 
-        stage('Deploy prod') {
+        stage('Spproval')
+        {
+            input message: 'Do you wish to deploy to production', ok: 'Yes, I am sure!'
+        }
+
+        stage('Deploy prod  ') {
             agent {
                 docker {
                     image 'node:18-alpine'
