@@ -80,7 +80,7 @@ pipeline {
             }
         }
 
-        stage('Spproval')
+        stage('Approval')
         {
             steps
             {
