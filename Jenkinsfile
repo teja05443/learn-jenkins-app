@@ -61,7 +61,7 @@ pipeline {
                 }
             }
         }
-        
+
         stage('Deploy staging') {
             agent {
                 docker {
@@ -78,9 +78,8 @@ pipeline {
                     node_modules/.bin/netlify deploy --dir=build --json > deploy-output.json
                     node_modules/.bin/node-jq -r '.deploy_url' deploy-output.json
                 '''
-                script
-                {
-                    env.STAGING_URL = sh(script: "node_modules/.bin/node-jq -r '.deploy_url' deploy-output.json", returnStdout: true)
+                script {
+                    env.STAGING_URL = sh(script: "node_modules/.bin/node-jq -r '.deploy_url' deploy-output.json", returnStdout: true).trim()
                 }
             }
         }
@@ -93,29 +92,25 @@ pipeline {
                 }
             }
 
-            environment
-            {
-                CI_ENVIRONMENT_URL = "$env.STAGING_URL"
+            environment {
+                CI_ENVIRONMENT_URL = "${env.STAGING_URL}"
             }
             steps {
                 sh '''
                     npx playwright test
                 '''
             }
+        }
 
-        stage('Approval')
-        {
-            steps
-            {
-                 timeout(time: 15, unit: 'MINUTES') 
-                {
+        stage('Approval') {
+            steps {
+                timeout(time: 15, unit: 'MINUTES') {
                     input message: 'Do you wish to deploy to production', ok: 'Yes, I am sure!'
                 }
-                
             }
         }
 
-        stage('Deploy prod  ') {
+        stage('Deploy prod') {
             agent {
                 docker {
                     image 'node:18-alpine'
@@ -141,8 +136,7 @@ pipeline {
                 }
             }
 
-            environment
-            {
+            environment {
                 CI_ENVIRONMENT_URL = 'https://poetic-kelpie-9fd244.netlify.app'
             }
             steps {
