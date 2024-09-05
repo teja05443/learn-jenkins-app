@@ -2,22 +2,27 @@ pipeline {
     agent any
 
     environment {
-        NETLIFY_SITE_ID = 'b82e32ec-c325-4c48-89ed-8f6b49323ef9'
+        NETLIFY_SITE_ID = '6d0666f9-daf2-480e-90a7-bd4b0971a441'
         NETLIFY_AUTH_TOKEN = credentials('netlify-token')
-        REACT_APP_VERSION = "1.0.$BUILD_ID"
     }
 
     stages {
-        stage('AWS Build') {
-            agent {
-                docker {
+
+        stage('AWS Build')
+        {
+            agent
+            {
+                docker
+                {
                     image 'amazon/aws-cli'
-                    args "--entrypoint=''"
+                    args "--entrypoint=''"  
                 }
             }
-            steps {
-                sh '''
+            steps
+            {
+                sh'''
                     aws --version
+                    aws s3 ls
                 '''
             }
         }
@@ -31,7 +36,7 @@ pipeline {
             }
             steps {
                 sh '''
-                    echo "Building with version $REACT_APP_VERSION"
+                    echo "Small Change"
                     ls -la
                     npm --version
                     node --version
@@ -116,7 +121,7 @@ pipeline {
             }
 
             environment {
-                CI_ENVIRONMENT_URL = 'https://dreamy-otter-4dd3f5.netlify.app'
+                CI_ENVIRONMENT_URL = 'https://poetic-kelpie-9fd244.netlify.app'
             }
             steps {
                 sh '''
