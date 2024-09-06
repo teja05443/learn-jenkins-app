@@ -9,6 +9,7 @@ pipeline {
             {
                 sh'''
                     docker build -f ci/Dockerfile -t my-playwright .
+                    docker build -f ci/Dockerfile-aws-cli -t my-aws-cli .
                 '''
             }
         }
