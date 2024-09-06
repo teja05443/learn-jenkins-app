@@ -3,6 +3,7 @@ pipeline {
 
     environment {
         AWS_DEFAULT_REGION = 'us-east-1'
+        APP_NAME = 'learnjenkinsapp'
         AWS_ECS_CLUSTER = 'LearnJenkinsApp-Cluster-Prod'
         AWS_ECS_SERVICE_PROD = 'LearnJenkinsApp-Service-Prod'
         AWS_ECS_TD_PROD = 'LearnJenkinsApp-TaskDefinition-Prod'
@@ -45,7 +46,7 @@ pipeline {
                     sh '''
                         docker build -t myjenkinsapp .
                         aws ecr get-login-password | docker login --username AWS --password-stdin $AWS_DOCKER_REGISTRY
-                        docker push $AWS_DOCKER_REGISTRY
+                        docker push $AWS_DOCKER_REGISTRY/$APP_NAME
                     '''
                 }
             }
