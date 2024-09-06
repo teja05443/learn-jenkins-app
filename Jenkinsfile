@@ -6,6 +6,7 @@ pipeline {
         AWS_ECS_CLUSTER = 'LearnJenkinsApp-Cluster-Prod'
         AWS_ECS_SERVICE_PROD = 'LearnJenkinsApp-Service-Prod'
         AWS_ECS_TD_PROD = 'LearnJenkinsApp-TaskDefinition-Prod'
+        AWS_DOCKER_REGISTRY = '002743134469.dkr.ecr.us-east-1.amazonaws.com'
     }
 
     stages {
@@ -39,9 +40,14 @@ pipeline {
                 }
             }
             steps {
-                sh '''
-                    docker build -t myjenkinsapp .
-                '''
+                withCredentials([usernamePassword(credentialsId: 'my-aws', passwordVariable: 'AWS_SECRET_ACCESS_KEY', usernameVariable: 'AWS_ACCESS_KEY_ID')]) {
+                        
+                    sh '''
+                        docker build -t myjenkinsapp .
+                        aws ecr get-login-password | docker login --username AWS --password-stdin $AWS_DOCKER_REGISTRY
+                        docker push $AWS_DOCKER_REGISTRY
+                    '''
+                }
             }
         }
 
