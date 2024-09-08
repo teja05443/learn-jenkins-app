@@ -2,33 +2,15 @@ pipeline {
     agent any
 
     environment {
-        NETLIFY_SITE_ID = '6d0666f9-daf2-480e-90a7-bd4b0971a441'
-        NETLIFY_AUTH_TOKEN = credentials('netlify-token')
+        AWS_DEFAULT_REGION = 'us-east-1'
+        APP_NAME = 'learnjenkinsapp'
+        AWS_ECS_CLUSTER = 'LearnJenkinsApp-Cluster-Prod'
+        AWS_ECS_SERVICE_PROD = 'LearnJenkinsApp-Service-Prod'
+        AWS_ECS_TD_PROD = 'LearnJenkinsApp-TaskDefinition-Prod'
+        AWS_DOCKER_REGISTRY = '002743134469.dkr.ecr.us-east-1.amazonaws.com'
     }
 
     stages {
-
-        stage('AWS Build')
-        {
-            agent
-            {
-                docker
-                {
-                    image 'amazon/aws-cli'
-                    args "--entrypoint=''"
-                }
-            }
-            steps
-            {
-                withCredentials([usernamePassword(credentialsId: 'my-aws', passwordVariable: 'AWS_SECRET_ACCESS_KEY', usernameVariable: 'AWS_ACCESS_KEY_ID')]) 
-                {
-                    sh'''
-                    aws --version
-                    aws s3 ls
-                    '''
-                }
-            }
-        }
 
         stage('Build') {
             agent {
@@ -50,91 +32,42 @@ pipeline {
             }
         }
 
-        stage('Test Parallel') {
-            parallel {
-                stage('Test') {
-                    agent {
-                        docker {
-                            image 'node:18-alpine'
-                            reuseNode true
-                        }
-                    }
-                    steps {
-                        sh '''
-                            test -f build/index.html
-                            npm test
-                        '''
-                    }
-                }
-                stage('E2E') {
-                    agent {
-                        docker {
-                            image 'my-playwright'
-                            reuseNode true
-                        }
-                    }
-                    steps {
-                        sh '''
-                            serve -s build &
-                            sleep 10
-                            npx playwright test
-                        '''
-                    }
-                }
-            }
-        }
-
-        stage('Deploy Staging') {
+        stage('Custom Docker Image') {
             agent {
                 docker {
-                    image 'my-playwright'
+                    image 'my-aws-cli'
                     reuseNode true
+                    args "-u root -v /var/run/docker.sock:/var/run/docker.sock --entrypoint=''"
                 }
             }
-
-            environment {
-                CI_ENVIRONMENT_URL = "STAGING URL NEEDS TO BE SET"
-            }
             steps {
-                sh '''
-                    netlify --version
-                    echo "Deploying to staging. SITE ID : $NETLIFY_SITE_ID"
-                    netlify status
-                    netlify deploy --dir=build --json > deploy-output.json
-                    CI_ENVIRONMENT_URL=$(node-jq -r '.deploy_url' deploy-output.json)
-                    npx playwright test
-                '''
-            }
-        }
-
-        stage('Approval') {
-            steps {
-                timeout(time: 15, unit: 'MINUTES') {
-                    input message: 'Do you wish to deploy to production', ok: 'Yes, I am sure!'
+                withCredentials([usernamePassword(credentialsId: 'my-aws', passwordVariable: 'AWS_SECRET_ACCESS_KEY', usernameVariable: 'AWS_ACCESS_KEY_ID')]) {
+                        
+                    sh '''
+                        docker build -t myjenkinsapp .
+                        aws ecr get-login-password | docker login --username AWS --password-stdin $AWS_DOCKER_REGISTRY
+                        docker push $AWS_DOCKER_REGISTRY/$APP_NAME
+                    '''
                 }
             }
         }
 
-        stage('Deploy Prod') {
+        stage('AWS Build') {
             agent {
                 docker {
-                    image 'my-playwright'
+                    image 'my-aws-cli'
                     reuseNode true
+                    args "-u root --entrypoint=''"
                 }
             }
-
-            environment {
-                CI_ENVIRONMENT_URL = 'https://poetic-kelpie-9fd244.netlify.app'
-            }
             steps {
-                sh '''
-                    node --version
-                    netlify --version 
-                    echo "Deploying to production. SITE ID : $NETLIFY_SITE_ID"
-                    netlify status
-                    netlify deploy --dir=build --prod
-                    npx playwright test
-                '''
+                withCredentials([usernamePassword(credentialsId: 'my-aws', passwordVariable: 'AWS_SECRET_ACCESS_KEY', usernameVariable: 'AWS_ACCESS_KEY_ID')]) {
+                    sh '''
+                        aws --version
+                        LATEST_TD_REVISION=$(aws ecs register-task-definition --cli-input-json file://AWS/task-definition.json | jq '.taskDefinition.revision')
+                        aws ecs update-service --cluster $AWS_ECS_CLUSTER --service $AWS_ECS_SERVICE_PROD --task-definition $AWS_ECS_TD_PROD:$LATEST_TD_REVISION
+                    '''
+                }
             }
         }
     }
